@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Clean Downloader</title>
+    <style>
+        :root {
+            --bg-color: #0f0f11;
+            --card-bg: #18181b;
+            --border-color: #27272a;
+            --text-main: #fafafa;
+            --text-muted: #a1a1aa;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-size: 14px;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        input:focus {
+            border-color: var(--accent);
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background-color: var(--accent);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        .hidden {
+            display: none;
+        }
+        .video-box {
+            margin-top: 15px;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            max-height: 350px;
+            border-radius: 8px;
+            background: black;
+            margin-bottom: 12px;
+        }
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #10b981;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
+        .action-btn:hover {
+            background-color: #059669;
+        }
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .images-grid img {
+            width: 100%;
+            border-radius: 8px;
+            object-fit: cover;
+            height: 150px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>TikTok Downloader</h1>
+        <p class="subtitle">Без водяных знаков и лишних переходов</p>
+        
+        <input type="text" id="urlInput" placeholder="Вставь ссылку на TikTok...">
+        <button id="downloadBtn">Найти и скачать</button>
+
+        <div id="status" class="subtitle hidden" style="margin-top: 15px;">Обработка...</div>
+        
+        <div id="result" class="hidden">
+            <div class="video-box">
+                <p id="videoTitle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;"></p>
+                
+                <!-- Контейнер для видео -->
+                <div id="videoContainer" class="hidden">
+                    <video id="videoPlayer" controls></video>
+                    <button id="downloadVideoBtn" class="action-btn">💾 Сохранить видео в галерею</button>
+                </div>
+
+                <!-- Контейнер для слайд-шоу из картинок -->
+                <div id="imagesContainer" class="hidden">
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Это пост-слайдшоу из картинок:</p>
+                    <div id="imagesGrid" class="images-grid"></div>
+                    <button id="downloadAllImagesBtn" class="action-btn">💾 Скачать все картинки</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const statusDiv = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+        const videoContainer = document.getElementById('videoContainer');
+        const imagesContainer = document.getElementById('imagesContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const downloadVideoBtn = document.getElementById('downloadVideoBtn');
+        const imagesGrid = document.getElementById('imagesGrid');
+        const downloadAllImagesBtn = document.getElementById('downloadAllImagesBtn');
+        const videoTitle = document.getElementById('videoTitle');
+
+        let currentData = null;
+
+        downloadBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url.includes('tiktok.com')) {
+                alert('Пожалуйста, введи корректную ссылку на TikTok!');
+                return;
+            }
+
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Получаем данные из TikTok...';
+            resultDiv.classList.add('hidden');
+            videoContainer.classList.add('hidden');
+            imagesContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
+                const data = await response.json();
+
+                if (data.code === 0 && data.data) {
+                    currentData = data.data;
+                    videoTitle.textContent = currentData.title || 'TikTok контент';
+                    
+                    statusDiv.style.display = 'none';
+                    resultDiv.classList.remove('hidden');
+
+                    // Проверяем: видео это или слайд-шоу из картинок
+                    if (currentData.images && currentData.images.length > 0) {
+                        // Это картинки
+                        imagesGrid.innerHTML = '';
+                        currentData.images.forEach(imgUrl => {
+                            const img = document.createElement('img');
+                            img.src = imgUrl;
+                            imagesGrid.appendChild(img);
+                        });
+                        imagesContainer.classList.remove('hidden');
+                    } else if (currentData.play) {
+                        // Это полноценное видео
+                        const videoUrl = currentData.play.startsWith('http') ? currentData.play : 'https://www.tikwm.com' + currentData.play;
+                        videoPlayer.src = videoUrl;
+                        videoContainer.classList.remove('hidden');
+                    } else {
+                        statusDiv.style.display = 'block';
+                        statusDiv.textContent = 'Не удалось найти медиафайлы в этом посте.';
+                    }
+                } else {
+                    statusDiv.style.display = 'block';
+                    statusDiv.textContent = 'Ошибка: не удалось найти контент. Проверь ссылку.';
+                }
+            } catch (err) {
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = 'Ошибка сети. Попробуй еще раз.';
+                console.error(err);
+            }
+        });
+
+        // Функция программного скачивания файла прямо в память телефона без переходов
+        async function downloadFile(fileUrl, filename) {
+            try {
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = 'Скачивание файла...';
+                
+                const response = await fetch(fileUrl);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                window.URL.revokeObjectURL(blobUrl);
+                a.remove();
+                statusDiv.style.display = 'none';
+            } catch (e) {
+                // Если кроссдоменная политика заблокирует fetch, делаем фоллбек через открытие ссылки в том же контексте/принудительное скачивание
+                window.open(fileUrl, '_blank');
+                statusDiv.style.display = 'none';
+            }
+        }
+
+        downloadVideoBtn.addEventListener('click', () => {
+            if (currentData && currentData.play) {
+                const videoUrl = currentData.play.startsWith('http') ? currentData.play : 'https://www.tikwm.com' + currentData.play;
+                downloadFile(videoUrl, 'tiktok_video.mp4');
+            }
+        });
+
+        downloadAllImagesBtn.addEventListener('click', async () => {
+            if (currentData && currentData.images) {
+                for (let i = 0; i < currentData.images.length; i++) {
+                    await downloadFile(currentData.images[i], `tiktok_image_${i + 1}.jpg`);
+                    // Небольшая задержка между скачиваниями пакета картинок
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+        });
+    </script>
+</body>
+</html>
